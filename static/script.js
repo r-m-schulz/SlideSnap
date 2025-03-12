@@ -274,27 +274,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Add iOS detection
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     function addImageToGallery(imageUrl, slideNumber) {
-        // Make upload container compact
-        dropZone.classList.add('compact');
-        
-        // Create gallery item
-        const item = document.createElement('div');
-        item.className = 'gallery-item';
+        const galleryItem = document.createElement('div');
+        galleryItem.className = 'gallery-item';
         
         const img = document.createElement('img');
         img.src = imageUrl;
         img.alt = `Slide ${slideNumber}`;
         
-        const downloadLink = document.createElement('a');
-        downloadLink.href = imageUrl;
-        downloadLink.className = 'download-btn';
-        downloadLink.download = `slide_${slideNumber}.png`;
-        downloadLink.textContent = 'Download';
+        const downloadBtn = document.createElement('a');
+        downloadBtn.className = 'download-btn';
+        downloadBtn.textContent = 'Download';
+        downloadBtn.href = imageUrl;
+        downloadBtn.download = `slide_${slideNumber}.png`;
         
-        item.appendChild(img);
-        item.appendChild(downloadLink);
-        gallery.appendChild(item);
+        galleryItem.appendChild(img);
+        galleryItem.appendChild(downloadBtn);
+        gallery.appendChild(galleryItem);
+
+        // Make the upload container compact
+        dropZone.classList.add('compact');
 
         // Add gallery controls if they don't exist
         if (!document.querySelector('.gallery-controls')) {
@@ -303,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const downloadAllBtn = document.createElement('button');
             downloadAllBtn.className = 'download-all-btn';
-            downloadAllBtn.textContent = 'Download All';
+            downloadAllBtn.textContent = isIOS ? 'Save All Images' : 'Download All';
             downloadAllBtn.onclick = downloadAllImages;
             
             const deleteAllBtn = document.createElement('button');
@@ -334,59 +336,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         progressText.textContent = '';
     }
 
-    // Add iOS detection
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
     async function downloadAllImages() {
         const images = gallery.querySelectorAll('.gallery-item img');
-        const downloadBtn = document.querySelector('.download-all-btn');
-        
-        // Change button state
-        downloadBtn.textContent = 'Preparing Download...';
-        downloadBtn.disabled = true;
+        if (images.length === 0) return;
 
-        try {
-            if (isIOS) {
-                // For iOS devices, download images one by one
-                downloadBtn.textContent = 'Saving Images...';
+        if (isIOS) {
+            // For iOS devices, show instructions and trigger downloads one by one
+            showMessage('Tap and hold each image to save to your camera roll');
+            
+            // Make each image easier to save
+            images.forEach((img, index) => {
+                const link = img.parentElement.querySelector('.download-btn');
+                link.style.display = 'block';
+                link.style.padding = '20px';
+                link.textContent = `Save Image ${index + 1}`;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.open(img.src, '_blank');
+                });
+            });
+        } else {
+            // For non-iOS devices, use ZIP download
+            try {
+                const zip = new JSZip();
+                let count = 0;
+                const total = images.length;
                 
-                for (let i = 0; i < images.length; i++) {
+                progressText.textContent = 'Preparing download...';
+                progress.hidden = false;
+                progressBar.style.width = '0%';
+
+                for (let i = 0; i < total; i++) {
                     const img = images[i];
                     const response = await fetch(img.src);
                     const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
+                    zip.file(`slide_${i + 1}.png`, blob);
                     
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `slide_${i + 1}.png`;
-                    link.target = '_blank'; // This helps on iOS
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                    
-                    // Small delay between downloads
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    count++;
+                    progressBar.style.width = `${(count / total) * 100}%`;
+                    progressText.textContent = `Adding image ${count} of ${total} to zip...`;
                 }
-                
-                // Show iOS-specific instructions
-                showMessage('Images ready! Save each image to your camera roll when they open');
-            } else {
-                // For non-iOS devices, use zip as before
-                const zip = new JSZip();
-                
-                const fetchPromises = Array.from(images).map(async (img, index) => {
-                    const response = await fetch(img.src);
-                    const blob = await response.blob();
-                    zip.file(`slide_${index + 1}.png`, blob);
-                });
 
-                await Promise.all(fetchPromises);
+                progressText.textContent = 'Generating zip file...';
                 const content = await zip.generateAsync({ type: 'blob' });
                 const zipUrl = URL.createObjectURL(content);
                 
                 // Get the original filename from the last uploaded file
-                const originalFileName = lastUploadedFile ? lastUploadedFile.name.replace(/\.[^/.]+$/, '') : 'all_slides';
+                const originalFileName = lastUploadedFile ? lastUploadedFile.name.replace(/\.[^/.]+$/, '') : 'slides';
                 
                 const link = document.createElement('a');
                 link.href = zipUrl;
@@ -395,16 +391,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(zipUrl);
-            }
 
-            // Reset button state
-            downloadBtn.textContent = 'Download All';
-            downloadBtn.disabled = false;
-        } catch (error) {
-            console.error('Error downloading images:', error);
-            showError('Failed to download images');
-            downloadBtn.textContent = 'Download All';
-            downloadBtn.disabled = false;
+                progressText.textContent = 'Download complete!';
+                setTimeout(() => {
+                    progress.hidden = true;
+                }, 1000);
+            } catch (error) {
+                console.error('Error:', error);
+                showError('An error occurred while preparing the download');
+                progress.hidden = true;
+            }
         }
     }
 
