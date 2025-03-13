@@ -370,15 +370,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Get the original filename from the last uploaded file
             const originalFileName = lastUploadedFile ? lastUploadedFile.name.replace(/\.[^/.]+$/, '') : 'slides';
+            const zipFileName = `${originalFileName}.zip`;
             
             const link = document.createElement('a');
             link.href = zipUrl;
-            link.download = `${originalFileName}_slides.zip`;
+            link.download = zipFileName;
 
             if (isIOS) {
                 // For iOS, open in new tab and show instructions
                 showMessage('Opening ZIP file. After downloading, go to Files, tap the ZIP, then use Share → Your Shortcut to save images.');
-                window.open(zipUrl, '_blank');
+                const newTab = window.open(zipUrl, '_blank');
+                // Set the filename for the download
+                if (newTab) {
+                    newTab.document.title = zipFileName;
+                }
             } else {
                 // For non-iOS, trigger direct download
                 document.body.appendChild(link);
