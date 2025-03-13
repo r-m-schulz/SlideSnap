@@ -340,7 +340,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const images = gallery.querySelectorAll('.gallery-item img');
         if (images.length === 0) return;
 
-        // For all devices, use ZIP download
         try {
             const zip = new JSZip();
             let count = 0;
@@ -362,7 +361,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             progressText.textContent = 'Generating zip file...';
-            const content = await zip.generateAsync({ type: 'blob' });
+            const content = await zip.generateAsync({ 
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 9 }
+            });
             const zipUrl = URL.createObjectURL(content);
             
             // Get the original filename from the last uploaded file
@@ -374,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (isIOS) {
                 // For iOS, open in new tab and show instructions
-                showMessage('Opening ZIP file. Use your Shortcut to save all images from the ZIP.');
+                showMessage('Opening ZIP file. After downloading, go to Files, tap the ZIP, then use Share → Your Shortcut to save images.');
                 window.open(zipUrl, '_blank');
             } else {
                 // For non-iOS, trigger direct download
