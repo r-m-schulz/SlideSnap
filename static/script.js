@@ -192,6 +192,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     viewport: viewport
                 }).promise;
 
+                // Add slide number
+                ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${i}/${numPages}`, viewport.width - 20, viewport.height - 20);
+
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
                 const imageUrl = URL.createObjectURL(blob);
                 addImageToGallery(imageUrl, i);
@@ -249,6 +255,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ctx.font = 'bold 60px -apple-system, BlinkMacSystemFont, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(`Slide ${i + 1}`, canvas.width / 2, canvas.height / 2);
+
+                    // Add slide number
+                    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${i + 1}/${numSlides}`, canvas.width - 20, canvas.height - 20);
                     
                     // Convert canvas to blob and create URL
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
