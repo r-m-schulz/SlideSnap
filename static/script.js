@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const downloadAllBtn = document.createElement('button');
             downloadAllBtn.className = 'download-all-btn';
-            downloadAllBtn.textContent = isIOS ? 'Save All Images' : 'Download All';
+            downloadAllBtn.textContent = 'Download All';  // Same text for all devices now
             downloadAllBtn.onclick = downloadAllImages;
             
             const deleteAllBtn = document.createElement('button');
@@ -340,67 +340,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         const images = gallery.querySelectorAll('.gallery-item img');
         if (images.length === 0) return;
 
-        if (isIOS) {
-            // For iOS devices, show instructions and trigger downloads one by one
-            showMessage('Tap and hold each image to save to your camera roll');
+        // For all devices, use ZIP download
+        try {
+            const zip = new JSZip();
+            let count = 0;
+            const total = images.length;
             
-            // Make each image easier to save
-            images.forEach((img, index) => {
-                const link = img.parentElement.querySelector('.download-btn');
-                link.style.display = 'block';
-                link.style.padding = '20px';
-                link.textContent = `Save Image ${index + 1}`;
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    window.open(img.src, '_blank');
-                });
-            });
-        } else {
-            // For non-iOS devices, use ZIP download
-            try {
-                const zip = new JSZip();
-                let count = 0;
-                const total = images.length;
-                
-                progressText.textContent = 'Preparing download...';
-                progress.hidden = false;
-                progressBar.style.width = '0%';
+            progressText.textContent = 'Preparing download...';
+            progress.hidden = false;
+            progressBar.style.width = '0%';
 
-                for (let i = 0; i < total; i++) {
-                    const img = images[i];
-                    const response = await fetch(img.src);
-                    const blob = await response.blob();
-                    zip.file(`slide_${i + 1}.png`, blob);
-                    
-                    count++;
-                    progressBar.style.width = `${(count / total) * 100}%`;
-                    progressText.textContent = `Adding image ${count} of ${total} to zip...`;
-                }
+            for (let i = 0; i < total; i++) {
+                const img = images[i];
+                const response = await fetch(img.src);
+                const blob = await response.blob();
+                zip.file(`slide_${i + 1}.png`, blob);
+                
+                count++;
+                progressBar.style.width = `${(count / total) * 100}%`;
+                progressText.textContent = `Adding image ${count} of ${total} to zip...`;
+            }
 
-                progressText.textContent = 'Generating zip file...';
-                const content = await zip.generateAsync({ type: 'blob' });
-                const zipUrl = URL.createObjectURL(content);
-                
-                // Get the original filename from the last uploaded file
-                const originalFileName = lastUploadedFile ? lastUploadedFile.name.replace(/\.[^/.]+$/, '') : 'slides';
-                
-                const link = document.createElement('a');
-                link.href = zipUrl;
-                link.download = `${originalFileName}_slides.zip`;
+            progressText.textContent = 'Generating zip file...';
+            const content = await zip.generateAsync({ type: 'blob' });
+            const zipUrl = URL.createObjectURL(content);
+            
+            // Get the original filename from the last uploaded file
+            const originalFileName = lastUploadedFile ? lastUploadedFile.name.replace(/\.[^/.]+$/, '') : 'slides';
+            
+            const link = document.createElement('a');
+            link.href = zipUrl;
+            link.download = `${originalFileName}_slides.zip`;
+
+            if (isIOS) {
+                // For iOS, open in new tab and show instructions
+                showMessage('Opening ZIP file. Use your Shortcut to save all images from the ZIP.');
+                window.open(zipUrl, '_blank');
+            } else {
+                // For non-iOS, trigger direct download
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                URL.revokeObjectURL(zipUrl);
-
-                progressText.textContent = 'Download complete!';
-                setTimeout(() => {
-                    progress.hidden = true;
-                }, 1000);
-            } catch (error) {
-                console.error('Error:', error);
-                showError('An error occurred while preparing the download');
-                progress.hidden = true;
             }
+            
+            URL.revokeObjectURL(zipUrl);
+
+            progressText.textContent = 'Download complete!';
+            setTimeout(() => {
+                progress.hidden = true;
+            }, 1000);
+        } catch (error) {
+            console.error('Error:', error);
+            showError('An error occurred while preparing the download');
+            progress.hidden = true;
         }
     }
 
