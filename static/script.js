@@ -14,6 +14,19 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
 }
 
+// Slide numbers toggle functionality
+function initSlideNumbers() {
+    const savedNumbers = localStorage.getItem('slideNumbers') || 'on';
+    document.documentElement.setAttribute('data-numbers', savedNumbers);
+}
+
+function toggleSlideNumbers() {
+    const currentNumbers = document.documentElement.getAttribute('data-numbers');
+    const newNumbers = currentNumbers === 'on' ? 'off' : 'on';
+    document.documentElement.setAttribute('data-numbers', newNumbers);
+    localStorage.setItem('slideNumbers', newNumbers);
+}
+
 // Load required libraries
 const loadPdfJs = new Promise((resolve) => {
     const pdfScript = document.createElement('script');
@@ -30,8 +43,9 @@ const loadJSZip = new Promise((resolve) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize theme
+    // Initialize theme and slide numbers
     initTheme();
+    initSlideNumbers();
     
     // Wait for libraries to load
     await Promise.all([loadPdfJs, loadJSZip]);
@@ -40,6 +54,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add theme toggle event listener
     const themeToggle = document.querySelector('.theme-toggle');
     themeToggle.addEventListener('click', toggleTheme);
+
+    // Add slide numbers toggle event listener
+    const slideNumbersToggle = document.querySelector('.slide-numbers-toggle');
+    slideNumbersToggle.addEventListener('click', toggleSlideNumbers);
 
     // Help modal functionality
     const helpButton = document.getElementById('helpButton');
@@ -192,11 +210,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     viewport: viewport
                 }).promise;
 
-                // Add slide number
-                ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.textAlign = 'right';
-                ctx.fillText(`${i}/${numPages}`, viewport.width - 20, viewport.height - 20);
+                // Add slide number if enabled
+                if (document.documentElement.getAttribute('data-numbers') === 'on') {
+                    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${i}/${numPages}`, viewport.width - 20, viewport.height - 20);
+                }
 
                 const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
                 const imageUrl = URL.createObjectURL(blob);
@@ -256,11 +276,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ctx.textAlign = 'center';
                     ctx.fillText(`Slide ${i + 1}`, canvas.width / 2, canvas.height / 2);
 
-                    // Add slide number
-                    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.textAlign = 'right';
-                    ctx.fillText(`${i + 1}/${numSlides}`, canvas.width - 20, canvas.height - 20);
+                    // Add slide number if enabled
+                    if (document.documentElement.getAttribute('data-numbers') === 'on') {
+                        ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, sans-serif';
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(`${i + 1}/${numSlides}`, canvas.width - 20, canvas.height - 20);
+                    }
                     
                     // Convert canvas to blob and create URL
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
